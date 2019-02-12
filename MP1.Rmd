@@ -1,3 +1,4 @@
+hi
 ---
 title: "SDS/CSC 293 Mini-Project 1: Splines"
 author: "Group XX: Rachel LaFlamme and Sophia Tannur"
