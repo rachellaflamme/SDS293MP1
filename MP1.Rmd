@@ -81,7 +81,12 @@ glimpse(sample_submission)
 Do any data wrangling/transforming here:
 
 ```{r}
+training <- training %>%
+  mutate(log_liv = log(GrLivArea)) %>%
+  select(log_liv, Id, GrLivArea, SalePrice)
 
+test <- test %>%
+  mutate(log_liv = log(GrLivArea)) 
 ```
 
 
@@ -90,19 +95,28 @@ Do any data wrangling/transforming here:
 A univariate exploratory visualization of the outcome variable:
 
 ```{r}
+outcome_exp <- ggplot(data = training, aes(x = SalePrice)) +
+  geom_histogram()
 
+outcome_exp
 ```
 
-A univariate exploratory visualization of the outcome variable:
+A univariate exploratory visualization of the predictor variable:
 
 ```{r}
+predic_exp <- ggplot(data = training, aes(x = log_liv)) +
+  geom_histogram()
 
+predic_exp
 ```
 
 A multivariate exploratory visualization of the *relationship* between the outcome and predictor variable.
 
 ```{r}
+relat <- ggplot(data = training, aes(x = log_liv, y = SalePrice)) +
+  geom_point()
 
+relat
 ```
 
 
@@ -116,7 +130,11 @@ A multivariate exploratory visualization of the *relationship* between the outco
 This whole section relates to the **due diligence** and the **reaching for the stars** steps of the grading scheme: choosing the degrees of freedom $df$ in a non-arbitrary fashion.
 
 ```{r}
+fitted_spline_model <- smooth.spline(x = training$log_liv, y = training$SalePrice, df = 10)
 
+fitted_spline_model_points <- fitted_spline_model %>%
+  broom::augment()
+fitted_spline_model_points
 ```
 
 ## Crossvalidation from scratch
@@ -157,7 +175,8 @@ df_star <- 10
 Visualize your fitted splines model $\widehat{f}()$ with degrees of freedom `df_star` on the training data. Recall we can only create this plot for the training data because we only have the outcome variable $y$ for the training data.
 
 ```{r}
-
+relat +
+  geom_line(data = fitted_spline_model_points, aes(x = x, y = .fitted), col = "blue", size = 1)
 ```
 
 
@@ -166,7 +185,9 @@ Visualize your fitted splines model $\widehat{f}()$ with degrees of freedom `df_
 Make your predictions/get your predicted values $\widehat{y}$ on the test data. 
 
 ```{r}
-
+predicted_points <- predict(fitted_spline_model, x = test$log_liv) %>%
+  as_tibble()
+predicted_points
 ```
 
 
@@ -182,10 +203,11 @@ Make your predictions/get your predicted values $\widehat{y}$ on the test data.
 The following code creates a submission where the predicted sale price for all houses in the test set is just the average sale price of the training data. Change the code so that you are submitted your spline model fitted predictions. 
 
 ```{r}
-submission <- sample_submission %>% 
-  mutate(SalePrice =  mean(training$SalePrice))
+submission <- test %>%
+  mutate(SalePrice = predicted_points$y) %>%
+  select(Id, SalePrice)
 
-write_csv(submission, path = "data/submission.csv")
+write_csv(submission, path = "submission.csv")
 ```
 
 ## Screenshot of your Kaggle score
