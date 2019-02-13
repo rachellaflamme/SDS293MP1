@@ -130,6 +130,8 @@ relat
 This whole section relates to the **due diligence** and the **reaching for the stars** steps of the grading scheme: choosing the degrees of freedom $df$ in a non-arbitrary fashion.
 
 ```{r}
+##MVP
+
 fitted_spline_model <- smooth.spline(x = training$log_liv, y = training$SalePrice, df = 10)
 
 fitted_spline_model_points <- fitted_spline_model %>%
@@ -171,6 +173,8 @@ trainingcv <- rbind(training1, training2, training3, training4, training5)
 ```
 
 
+
+##Degrees of Freedom = 20
 ```{r}
 ##building first iteration of cv training data
 training1values <- c(1,2,3,4)
@@ -186,52 +190,39 @@ testcv_1 <- trainingcv %>%
   mutate(log_liv = log(GrLivArea)) 
 
 ##fitting training data to model with df=20
-fitted_spline_model1 <- smooth.spline(x = trainingcv_1$log_liv, y = trainingcv_1$SalePrice, df = 20)
+twenty_df_model1 <- smooth.spline(x = trainingcv_1$log_liv, y = trainingcv_1$SalePrice, df = 20)
 
 ##converting output into a dataframe
-fitted_spline_model_points1 <- fitted_spline_model1 %>%
+twenty_df_model_points1 <- twenty_df_model1 %>%
   broom::augment()
-fitted_spline_model_points1
+twenty_df_model_points1
 
 #graphing training results
 ggplot(data = trainingcv_1, aes(x = log_liv, y = SalePrice)) +
-  geom_point() + geom_line(data = fitted_spline_model_points1, aes(x = x, y = .fitted), col = "blue", size = 1)
+  geom_point() + geom_line(data = twenty_df_model_points1, aes(x = x, y = .fitted), col = "blue", size = 1)
 
 ##using test data with model, df = 20
-fitted_spline_model_test1 <- smooth.spline(x = testcv_1$log_liv, y = testcv_1$SalePrice, df = 20)
+twenty_df_predicted_points1 <- predict(twenty_df_model1, x = testcv_1$log_liv) %>%
+  as_tibble()
 
-fitted_spline_model_points_test1 <- fitted_spline_model_test1 %>%
-  broom::augment()
-fitted_spline_model_points_test1
+testcv_1 <- testcv_1 %>%
+  mutate(price_hat = twenty_df_predicted_points1$y)
+  
 
 ##calculate RMSE of test data
-rmse_frame1 <- fitted_spline_model_points_test1%>%
-  mutate(
-    squared_residual = .resid^2
-    ) %>%
+testcv_1 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
   summarize(mse = mean(squared_residual)) %>%
-  mutate(rmse = sqrt(mse))  %>%
-  mutate(iteration = 1)
+  mutate(rmse = sqrt(mse))
 
-rmse_frame1
 
 #graphing test results
 ggplot(data = testcv_1, aes(x = log_liv, y = SalePrice)) +
-  geom_point() + geom_line(data = fitted_spline_model_points_test1, aes(x = x, y = .fitted), col = "blue", size = 1)
-
-
-
+  geom_point() + geom_line(data = twenty_df_predicted_points1, aes(x = x, y = y), col = "blue", size = 1)
 ```
 
-
-```{r}
-fitted_spline_model_points %>%
-  mutate(
-    squared_residual = .resid^2
-    ) %>%
-  summarize(mse = mean(squared_residual)) %>%
-  mutate(rmse = sqrt(mse))
-```
+RMSE1 = 52,809
 
 ```{r}
 ##building second iteration of cv training data
@@ -247,40 +238,40 @@ testcv_2 <- trainingcv %>%
   filter(fold == 4) %>%
   mutate(log_liv = log(GrLivArea)) 
 
-##fitting training data to model with df=15
-fitted_spline_model2 <- smooth.spline(x = trainingcv_2$log_liv, y = trainingcv_2$SalePrice, df = 15)
+##fitting training data to model with df=20 again
+twenty_df_model2 <- smooth.spline(x = trainingcv_2$log_liv, y = trainingcv_2$SalePrice, df = 20)
 
-##converting output into a dataframe
-fitted_spline_model_points2 <- fitted_spline_model2 %>%
+##converting output into a dataframe 2
+twenty_df_model_points2 <- twenty_df_model2 %>%
   broom::augment()
-fitted_spline_model_points2
+twenty_df_model_points2
 
-#graphing training results
+#graphing training results 2
 ggplot(data = trainingcv_2, aes(x = log_liv, y = SalePrice)) +
-  geom_point() + geom_line(data = fitted_spline_model_points2, aes(x = x, y = .fitted), col = "blue", size = 1)
+  geom_point() + geom_line(data = twenty_df_model_points2, aes(x = x, y = .fitted), col = "blue", size = 1)
 
-##using test data with model, df = 15
-fitted_spline_model_test2 <- smooth.spline(x = testcv_2$log_liv, y = testcv_2$SalePrice, df = 15)
+##using test data with model, df = 20
+twenty_df_predicted_points2 <- predict(twenty_df_model2, x = testcv_2$log_liv) %>%
+  as_tibble()
 
-fitted_spline_model_points_test2 <- fitted_spline_model_test2 %>%
-  broom::augment()
-fitted_spline_model_points_test2
+testcv_2 <- testcv_2 %>%
+  mutate(price_hat = twenty_df_predicted_points2$y)
+  
 
 ##calculate RMSE of test data
-rmse_frame2 <- fitted_spline_model_points_test2%>%
-  mutate(
-    squared_residual = .resid^2
-    ) %>%
+testcv_2 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
   summarize(mse = mean(squared_residual)) %>%
-  mutate(rmse = sqrt(mse))  %>%
-  mutate(iteration = 2)
+  mutate(rmse = sqrt(mse))
 
-rmse_frame2
 
-#graphing test results
+#graphing test results 2
 ggplot(data = testcv_2, aes(x = log_liv, y = SalePrice)) +
-  geom_point() + geom_line(data = fitted_spline_model_points_test2, aes(x = x, y = .fitted), col = "blue", size = 1)
+  geom_point() + geom_line(data = twenty_df_predicted_points2, aes(x = x, y = y), col = "blue", size = 1)
 ```
+RMSE2 = 50,319
+
 
 ```{r}
 ##building third iteration of cv training data
@@ -296,40 +287,40 @@ testcv_3 <- trainingcv %>%
   filter(fold == 3) %>%
   mutate(log_liv = log(GrLivArea)) 
 
-##fitting training data to model with df=10
-fitted_spline_model3 <- smooth.spline(x = trainingcv_3$log_liv, y = trainingcv_3$SalePrice, df = 10)
+##fitting training data to model with df=20 again
+twenty_df_model3 <- smooth.spline(x = trainingcv_3$log_liv, y = trainingcv_3$SalePrice, df = 20)
 
-##converting output into a dataframe
-fitted_spline_model_points3 <- fitted_spline_model3 %>%
+##converting output into a dataframe 3
+twenty_df_model_points3 <- twenty_df_model3 %>%
   broom::augment()
-fitted_spline_model_points3
+twenty_df_model_points3
 
-#graphing training results
+#graphing training results 3
 ggplot(data = trainingcv_3, aes(x = log_liv, y = SalePrice)) +
-  geom_point() + geom_line(data = fitted_spline_model_points3, aes(x = x, y = .fitted), col = "blue", size = 1)
+  geom_point() + geom_line(data = twenty_df_model_points3, aes(x = x, y = .fitted), col = "blue", size = 1)
 
-##using test data with model, df = 15
-fitted_spline_model_test3 <- smooth.spline(x = testcv_3$log_liv, y = testcv_3$SalePrice, df = 10)
+##using test data with model, df = 20; 3
+twenty_df_predicted_points3 <- predict(twenty_df_model3, x = testcv_3$log_liv) %>%
+  as_tibble()
 
-fitted_spline_model_points_test3 <- fitted_spline_model_test3 %>%
-  broom::augment()
-fitted_spline_model_points_test3
+testcv_3 <- testcv_3 %>%
+  mutate(price_hat = twenty_df_predicted_points3$y)
+  
 
-##calculate RMSE of test data
-rmse_frame3 <- fitted_spline_model_points_test3%>%
-  mutate(
-    squared_residual = .resid^2
-    ) %>%
+##calculate RMSE of test data 3
+testcv_3 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
   summarize(mse = mean(squared_residual)) %>%
-  mutate(rmse = sqrt(mse))  %>%
-  mutate(iteration = 3)
+  mutate(rmse = sqrt(mse))
 
-rmse_frame3
 
-#graphing test results
+#graphing test results 3
 ggplot(data = testcv_3, aes(x = log_liv, y = SalePrice)) +
-  geom_point() + geom_line(data = fitted_spline_model_points_test3, aes(x = x, y = .fitted), col = "blue", size = 1)
+  geom_point() + geom_line(data = twenty_df_predicted_points3, aes(x = x, y = y), col = "blue", size = 1)
 ```
+RMSE3: 56517
+
 
 ```{r}
 ##building fourth iteration of cv training data
@@ -345,40 +336,40 @@ testcv_4 <- trainingcv %>%
   filter(fold == 2) %>%
   mutate(log_liv = log(GrLivArea)) 
 
-##fitting training data to model with df=10.5
-fitted_spline_model4 <- smooth.spline(x = trainingcv_4$log_liv, y = trainingcv_4$SalePrice, df = 10.5)
+##fitting training data to model with df=20 again
+twenty_df_model4 <- smooth.spline(x = trainingcv_4$log_liv, y = trainingcv_4$SalePrice, df = 20)
 
-##converting output into a dataframe
-fitted_spline_model_points4 <- fitted_spline_model4 %>%
+##converting output into a dataframe 4
+twenty_df_model_points4 <- twenty_df_model4 %>%
   broom::augment()
-fitted_spline_model_points4
+twenty_df_model_points4
 
-#graphing training results
+#graphing training results 4
 ggplot(data = trainingcv_4, aes(x = log_liv, y = SalePrice)) +
-  geom_point() + geom_line(data = fitted_spline_model_points4, aes(x = x, y = .fitted), col = "blue", size = 1)
+  geom_point() + geom_line(data = twenty_df_model_points4, aes(x = x, y = .fitted), col = "blue", size = 1)
 
-##using test data with model, df = 10.5
-fitted_spline_model_test4 <- smooth.spline(x = testcv_4$log_liv, y = testcv_4$SalePrice, df = 10.5)
+##using test data with model, df = 20; 4
+twenty_df_predicted_points4 <- predict(twenty_df_model4, x = testcv_4$log_liv) %>%
+  as_tibble()
 
-fitted_spline_model_points_test4 <- fitted_spline_model_test4 %>%
-  broom::augment()
-fitted_spline_model_points_test4
+testcv_4 <- testcv_4 %>%
+  mutate(price_hat = twenty_df_predicted_points4$y)
+  
 
-##calculate RMSE of test data
-rmse_frame4 <- fitted_spline_model_points_test4%>%
-  mutate(
-    squared_residual = .resid^2
-    ) %>%
+##calculate RMSE of test data 4
+testcv_4 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
   summarize(mse = mean(squared_residual)) %>%
-  mutate(rmse = sqrt(mse))  %>%
-  mutate(iteration = 4)
+  mutate(rmse = sqrt(mse))
 
-rmse_frame4
 
-#graphing test results
+#graphing test results 4
 ggplot(data = testcv_4, aes(x = log_liv, y = SalePrice)) +
-  geom_point() + geom_line(data = fitted_spline_model_points_test4, aes(x = x, y = .fitted), col = "blue", size = 1)
+  geom_point() + geom_line(data = twenty_df_predicted_points4, aes(x = x, y = y), col = "blue", size = 1)
 ```
+RMSE4: 85334
+
 ```{r}
 ##building fifth iteration of cv training data
 training5values <- c(2,3,4,5)
@@ -393,40 +384,553 @@ testcv_5 <- trainingcv %>%
   filter(fold == 1) %>%
   mutate(log_liv = log(GrLivArea)) 
 
-##fitting training data to model with df=9.75
-fitted_spline_model5 <- smooth.spline(x = trainingcv_5$log_liv, y = trainingcv_5$SalePrice, df = 9.75)
+##fitting training data to model with df=20 again
+twenty_df_model5 <- smooth.spline(x = trainingcv_5$log_liv, y = trainingcv_5$SalePrice, df = 20)
+
+##converting output into a dataframe 5
+twenty_df_model_points5 <- twenty_df_model5 %>%
+  broom::augment()
+twenty_df_model_points5
+
+#graphing training results 5
+ggplot(data = trainingcv_5, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = twenty_df_model_points5, aes(x = x, y = .fitted), col = "blue", size = 1)
+
+##using test data with model, df = 20; 5
+twenty_df_predicted_points5 <- predict(twenty_df_model5, x = testcv_5$log_liv) %>%
+  as_tibble()
+
+testcv_5 <- testcv_5 %>%
+  mutate(price_hat = twenty_df_predicted_points5$y)
+  
+
+##calculate RMSE of test data 5
+testcv_5 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
+  summarize(mse = mean(squared_residual)) %>%
+  mutate(rmse = sqrt(mse))
+
+
+#graphing test results 5
+ggplot(data = testcv_5, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = twenty_df_predicted_points5, 
+                           aes(x = x, y = y), col = "blue", size = 1)
+```
+RMSE5: 58528
+
+
+```{r}
+rmse_frame <- rbind(rmse_frame1,rmse_frame2, rmse_frame3, rmse_frame4, rmse_frame5)
+
+rmse_results <- rmse_frame %>%
+  mutate(rmse_total = sum(rmse))%>%
+  mutate(rmse_results = rmse_total/nrow(rmse_frame))   
+rmse_results
+```
+
+##For degrees of freedom = 10
+```{r}
+##building first iteration of cv training data
+training1values <- c(1,2,3,4)
+
+trainingcv_1 <- trainingcv %>%
+  filter(fold %in% training1values) %>%
+  mutate(log_liv = log(GrLivArea)) %>%
+  select(log_liv, Id, GrLivArea, SalePrice)
+
+##building first iteration of cv test data
+testcv_1 <- trainingcv %>%
+  filter(fold == 5) %>%
+  mutate(log_liv = log(GrLivArea)) 
+
+##fitting training data to model with df=20
+ten_df_model1 <- smooth.spline(x = trainingcv_1$log_liv, y = trainingcv_1$SalePrice, df = 10)
 
 ##converting output into a dataframe
-fitted_spline_model_points5 <- fitted_spline_model5 %>%
+ten_df_model_points1 <- ten_df_model1 %>%
   broom::augment()
-fitted_spline_model_points5
+ten_df_model_points1
 
 #graphing training results
-ggplot(data = trainingcv_5, aes(x = log_liv, y = SalePrice)) +
-  geom_point() + geom_line(data = fitted_spline_model_points5, aes(x = x, y = .fitted), col = "blue", size = 1)
+ggplot(data = trainingcv_1, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_model_points1, aes(x = x, y = .fitted), col = "blue", size = 1)
 
-##using test data with model, df = 9.75
-fitted_spline_model_test5 <- smooth.spline(x = testcv_5$log_liv, y = testcv_5$SalePrice, df = 9.75)
+##using test data with model, df = 20
+ten_df_predicted_points1 <- predict(ten_df_model1, x = testcv_1$log_liv) %>%
+  as_tibble()
 
-fitted_spline_model_points_test5 <- fitted_spline_model_test5 %>%
-  broom::augment()
-fitted_spline_model_points_test5
+testcv_1 <- testcv_1 %>%
+  mutate(price_hat = ten_df_predicted_points1$y)
+  
 
 ##calculate RMSE of test data
-rmse_frame5 <- fitted_spline_model_points_test5%>%
-  mutate(
-    squared_residual = .resid^2
-    ) %>%
+testcv_1 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
   summarize(mse = mean(squared_residual)) %>%
-  mutate(rmse = sqrt(mse))  %>%
-  mutate(iteration = 5)
+  mutate(rmse = sqrt(mse))
 
-rmse_frame5
 
 #graphing test results
-ggplot(data = testcv_5, aes(x = log_liv, y = SalePrice)) +
-  geom_point() + geom_line(data = fitted_spline_model_points_test5, aes(x = x, y = .fitted), col = "blue", size = 1)
+ggplot(data = testcv_1, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_predicted_points1, aes(x = x, y = y), col = "blue", size = 1)
 ```
+
+RMSE1 = 52,567
+
+```{r}
+##building second iteration of cv training data
+training2values <- c(1,2,3,5)
+
+trainingcv_2 <- trainingcv %>%
+  filter(fold %in% training2values) %>%
+  mutate(log_liv = log(GrLivArea)) %>%
+  select(log_liv, Id, GrLivArea, SalePrice)
+
+##building second iteration of cv test data
+testcv_2 <- trainingcv %>%
+  filter(fold == 4) %>%
+  mutate(log_liv = log(GrLivArea)) 
+
+##fitting training data to model with df=20 again
+ten_df_model2 <- smooth.spline(x = trainingcv_2$log_liv, y = trainingcv_2$SalePrice, df = 10)
+
+##converting output into a dataframe 2
+ten_df_model_points2 <- ten_df_model2 %>%
+  broom::augment()
+ten_df_model_points2
+
+#graphing training results 2
+ggplot(data = trainingcv_2, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_model_points2, aes(x = x, y = .fitted), col = "blue", size = 1)
+
+##using test data with model, df = 20
+ten_df_predicted_points2 <- predict(ten_df_model2, x = testcv_2$log_liv) %>%
+  as_tibble()
+
+testcv_2 <- testcv_2 %>%
+  mutate(price_hat = ten_df_predicted_points2$y)
+  
+
+##calculate RMSE of test data
+testcv_2 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
+  summarize(mse = mean(squared_residual)) %>%
+  mutate(rmse = sqrt(mse))
+
+
+#graphing test results 2
+ggplot(data = testcv_2, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_predicted_points2, aes(x = x, y = y), col = "blue", size = 1)
+```
+RMSE2 = 49985
+
+
+```{r}
+##building third iteration of cv training data
+training3values <- c(1,2,4,5)
+
+trainingcv_3 <- trainingcv %>%
+  filter(fold %in% training3values) %>%
+  mutate(log_liv = log(GrLivArea)) %>%
+  select(log_liv, Id, GrLivArea, SalePrice)
+
+##building third iteration of cv test data
+testcv_3 <- trainingcv %>%
+  filter(fold == 3) %>%
+  mutate(log_liv = log(GrLivArea)) 
+
+##fitting training data to model with df=20 again
+ten_df_model3 <- smooth.spline(x = trainingcv_3$log_liv, y = trainingcv_3$SalePrice, df = 10)
+
+##converting output into a dataframe 3
+ten_df_model_points3 <- ten_df_model3 %>%
+  broom::augment()
+ten_df_model_points3
+
+#graphing training results 3
+ggplot(data = trainingcv_3, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_model_points3, aes(x = x, y = .fitted), col = "blue", size = 1)
+
+##using test data with model, df = 20; 3
+ten_df_predicted_points3 <- predict(ten_df_model3, 
+                                    x = testcv_3$log_liv) %>%
+  as_tibble()
+
+testcv_3 <- testcv_3 %>%
+  mutate(price_hat = ten_df_predicted_points3$y)
+  
+
+##calculate RMSE of test data 3
+testcv_3 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
+  summarize(mse = mean(squared_residual)) %>%
+  mutate(rmse = sqrt(mse))
+
+
+#graphing test results 3
+ggplot(data = testcv_3, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_predicted_points3, aes(x = x, y = y), col = "blue", size = 1)
+```
+RMSE3: 57383
+
+
+```{r}
+##building fourth iteration of cv training data
+training4values <- c(1,3,4,5)
+
+trainingcv_4 <- trainingcv %>%
+  filter(fold %in% training4values) %>%
+  mutate(log_liv = log(GrLivArea)) %>%
+  select(log_liv, Id, GrLivArea, SalePrice)
+
+##building fourth iteration of cv test data
+testcv_4 <- trainingcv %>%
+  filter(fold == 2) %>%
+  mutate(log_liv = log(GrLivArea)) 
+
+##fitting training data to model with df=20 again
+ten_df_model4 <- smooth.spline(x = trainingcv_4$log_liv, y = trainingcv_4$SalePrice, df = 10)
+
+##converting output into a dataframe 4
+ten_df_model_points4 <- ten_df_model4 %>%
+  broom::augment()
+ten_df_model_points4
+
+#graphing training results 4
+ggplot(data = trainingcv_4, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_model_points4, aes(x = x, y = .fitted), col = "blue", size = 1)
+
+##using test data with model, df = 20; 4
+ten_df_predicted_points4 <- predict(ten_df_model4, x = testcv_4$log_liv) %>%
+  as_tibble()
+
+testcv_4 <- testcv_4 %>%
+  mutate(price_hat = ten_df_predicted_points4$y)
+  
+
+##calculate RMSE of test data 4
+testcv_4 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
+  summarize(mse = mean(squared_residual)) %>%
+  mutate(rmse = sqrt(mse))
+
+
+#graphing test results 4
+ggplot(data = testcv_4, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_predicted_points4, aes(x = x, y = y), col = "blue", size = 1)
+```
+RMSE4: 79948
+
+```{r}
+##building fifth iteration of cv training data
+training5values <- c(2,3,4,5)
+
+trainingcv_5 <- trainingcv %>%
+  filter(fold %in% training5values) %>%
+  mutate(log_liv = log(GrLivArea)) %>%
+  select(log_liv, Id, GrLivArea, SalePrice)
+
+##building fifth iteration of cv test data
+testcv_5 <- trainingcv %>%
+  filter(fold == 1) %>%
+  mutate(log_liv = log(GrLivArea)) 
+
+##fitting training data to model with df=20 again
+ten_df_model5 <- smooth.spline(x = trainingcv_5$log_liv, y = trainingcv_5$SalePrice, df = 10)
+
+##converting output into a dataframe 5
+ten_df_model_points5 <- ten_df_model5 %>%
+  broom::augment()
+ten_df_model_points5
+
+#graphing training results 5
+ggplot(data = trainingcv_5, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_model_points5, aes(x = x, y = .fitted), col = "blue", size = 1)
+
+##using test data with model, df = 20; 5
+ten_df_predicted_points5 <- predict(ten_df_model5, x = testcv_5$log_liv) %>%
+  as_tibble()
+
+testcv_5 <- testcv_5 %>%
+  mutate(price_hat = ten_df_predicted_points5$y)
+  
+
+##calculate RMSE of test data 5
+testcv_5 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
+  summarize(mse = mean(squared_residual)) %>%
+  mutate(rmse = sqrt(mse))
+
+
+#graphing test results 5
+ggplot(data = testcv_5, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_predicted_points5, 
+                           aes(x = x, y = y), col = "blue", size = 1)
+```
+RMSE5: 59659
+
+
+```{r}
+rmse_frame <- rbind(rmse_frame1,rmse_frame2, rmse_frame3, rmse_frame4, rmse_frame5)
+
+rmse_results <- rmse_frame %>%
+  mutate(rmse_total = sum(rmse))%>%
+  mutate(rmse_results = rmse_total/nrow(rmse_frame))   
+rmse_results
+```
+
+##For degrees of freedom = 8
+```{r}
+##building first iteration of cv training data
+training1values <- c(1,2,3,4)
+
+trainingcv_1 <- trainingcv %>%
+  filter(fold %in% training1values) %>%
+  mutate(log_liv = log(GrLivArea)) %>%
+  select(log_liv, Id, GrLivArea, SalePrice)
+
+##building first iteration of cv test data
+testcv_1 <- trainingcv %>%
+  filter(fold == 5) %>%
+  mutate(log_liv = log(GrLivArea)) 
+
+##fitting training data to model with df=20
+ten_df_model1 <- smooth.spline(x = trainingcv_1$log_liv, y = trainingcv_1$SalePrice, df = 10)
+
+##converting output into a dataframe
+ten_df_model_points1 <- ten_df_model1 %>%
+  broom::augment()
+ten_df_model_points1
+
+#graphing training results
+ggplot(data = trainingcv_1, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_model_points1, aes(x = x, y = .fitted), col = "blue", size = 1)
+
+##using test data with model, df = 20
+ten_df_predicted_points1 <- predict(ten_df_model1, x = testcv_1$log_liv) %>%
+  as_tibble()
+
+testcv_1 <- testcv_1 %>%
+  mutate(price_hat = ten_df_predicted_points1$y)
+  
+
+##calculate RMSE of test data
+testcv_1 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
+  summarize(mse = mean(squared_residual)) %>%
+  mutate(rmse = sqrt(mse))
+
+
+#graphing test results
+ggplot(data = testcv_1, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_predicted_points1, aes(x = x, y = y), col = "blue", size = 1)
+```
+
+RMSE1 = 52,567
+
+```{r}
+##building second iteration of cv training data
+training2values <- c(1,2,3,5)
+
+trainingcv_2 <- trainingcv %>%
+  filter(fold %in% training2values) %>%
+  mutate(log_liv = log(GrLivArea)) %>%
+  select(log_liv, Id, GrLivArea, SalePrice)
+
+##building second iteration of cv test data
+testcv_2 <- trainingcv %>%
+  filter(fold == 4) %>%
+  mutate(log_liv = log(GrLivArea)) 
+
+##fitting training data to model with df=20 again
+ten_df_model2 <- smooth.spline(x = trainingcv_2$log_liv, y = trainingcv_2$SalePrice, df = 10)
+
+##converting output into a dataframe 2
+ten_df_model_points2 <- ten_df_model2 %>%
+  broom::augment()
+ten_df_model_points2
+
+#graphing training results 2
+ggplot(data = trainingcv_2, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_model_points2, aes(x = x, y = .fitted), col = "blue", size = 1)
+
+##using test data with model, df = 20
+ten_df_predicted_points2 <- predict(ten_df_model2, x = testcv_2$log_liv) %>%
+  as_tibble()
+
+testcv_2 <- testcv_2 %>%
+  mutate(price_hat = ten_df_predicted_points2$y)
+  
+
+##calculate RMSE of test data
+testcv_2 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
+  summarize(mse = mean(squared_residual)) %>%
+  mutate(rmse = sqrt(mse))
+
+
+#graphing test results 2
+ggplot(data = testcv_2, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_predicted_points2, aes(x = x, y = y), col = "blue", size = 1)
+```
+RMSE2 = 49985
+
+
+```{r}
+##building third iteration of cv training data
+training3values <- c(1,2,4,5)
+
+trainingcv_3 <- trainingcv %>%
+  filter(fold %in% training3values) %>%
+  mutate(log_liv = log(GrLivArea)) %>%
+  select(log_liv, Id, GrLivArea, SalePrice)
+
+##building third iteration of cv test data
+testcv_3 <- trainingcv %>%
+  filter(fold == 3) %>%
+  mutate(log_liv = log(GrLivArea)) 
+
+##fitting training data to model with df=20 again
+ten_df_model3 <- smooth.spline(x = trainingcv_3$log_liv, y = trainingcv_3$SalePrice, df = 10)
+
+##converting output into a dataframe 3
+ten_df_model_points3 <- ten_df_model3 %>%
+  broom::augment()
+ten_df_model_points3
+
+#graphing training results 3
+ggplot(data = trainingcv_3, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_model_points3, aes(x = x, y = .fitted), col = "blue", size = 1)
+
+##using test data with model, df = 20; 3
+ten_df_predicted_points3 <- predict(ten_df_model3, 
+                                    x = testcv_3$log_liv) %>%
+  as_tibble()
+
+testcv_3 <- testcv_3 %>%
+  mutate(price_hat = ten_df_predicted_points3$y)
+  
+
+##calculate RMSE of test data 3
+testcv_3 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
+  summarize(mse = mean(squared_residual)) %>%
+  mutate(rmse = sqrt(mse))
+
+
+#graphing test results 3
+ggplot(data = testcv_3, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_predicted_points3, aes(x = x, y = y), col = "blue", size = 1)
+```
+RMSE3: 57383
+
+
+```{r}
+##building fourth iteration of cv training data
+training4values <- c(1,3,4,5)
+
+trainingcv_4 <- trainingcv %>%
+  filter(fold %in% training4values) %>%
+  mutate(log_liv = log(GrLivArea)) %>%
+  select(log_liv, Id, GrLivArea, SalePrice)
+
+##building fourth iteration of cv test data
+testcv_4 <- trainingcv %>%
+  filter(fold == 2) %>%
+  mutate(log_liv = log(GrLivArea)) 
+
+##fitting training data to model with df=20 again
+ten_df_model4 <- smooth.spline(x = trainingcv_4$log_liv, y = trainingcv_4$SalePrice, df = 10)
+
+##converting output into a dataframe 4
+ten_df_model_points4 <- ten_df_model4 %>%
+  broom::augment()
+ten_df_model_points4
+
+#graphing training results 4
+ggplot(data = trainingcv_4, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_model_points4, aes(x = x, y = .fitted), col = "blue", size = 1)
+
+##using test data with model, df = 20; 4
+ten_df_predicted_points4 <- predict(ten_df_model4, x = testcv_4$log_liv) %>%
+  as_tibble()
+
+testcv_4 <- testcv_4 %>%
+  mutate(price_hat = ten_df_predicted_points4$y)
+  
+
+##calculate RMSE of test data 4
+testcv_4 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
+  summarize(mse = mean(squared_residual)) %>%
+  mutate(rmse = sqrt(mse))
+
+
+#graphing test results 4
+ggplot(data = testcv_4, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_predicted_points4, aes(x = x, y = y), col = "blue", size = 1)
+```
+RMSE4: 79948
+
+```{r}
+##building fifth iteration of cv training data
+training5values <- c(2,3,4,5)
+
+trainingcv_5 <- trainingcv %>%
+  filter(fold %in% training5values) %>%
+  mutate(log_liv = log(GrLivArea)) %>%
+  select(log_liv, Id, GrLivArea, SalePrice)
+
+##building fifth iteration of cv test data
+testcv_5 <- trainingcv %>%
+  filter(fold == 1) %>%
+  mutate(log_liv = log(GrLivArea)) 
+
+##fitting training data to model with df=20 again
+ten_df_model5 <- smooth.spline(x = trainingcv_5$log_liv, y = trainingcv_5$SalePrice, df = 10)
+
+##converting output into a dataframe 5
+ten_df_model_points5 <- ten_df_model5 %>%
+  broom::augment()
+ten_df_model_points5
+
+#graphing training results 5
+ggplot(data = trainingcv_5, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_model_points5, aes(x = x, y = .fitted), col = "blue", size = 1)
+
+##using test data with model, df = 20; 5
+ten_df_predicted_points5 <- predict(ten_df_model5, x = testcv_5$log_liv) %>%
+  as_tibble()
+
+testcv_5 <- testcv_5 %>%
+  mutate(price_hat = ten_df_predicted_points5$y)
+  
+
+##calculate RMSE of test data 5
+testcv_5 %>%
+  mutate(residual = SalePrice - price_hat, 
+         squared_residual = residual^2) %>%
+  summarize(mse = mean(squared_residual)) %>%
+  mutate(rmse = sqrt(mse))
+
+
+#graphing test results 5
+ggplot(data = testcv_5, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = ten_df_predicted_points5, 
+                           aes(x = x, y = y), col = "blue", size = 1)
+```
+RMSE5: 59659
+
 
 ```{r}
 rmse_frame <- rbind(rmse_frame1,rmse_frame2, rmse_frame3, rmse_frame4, rmse_frame5)
