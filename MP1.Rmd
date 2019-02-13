@@ -46,8 +46,8 @@ You will be submiting an entry to Kaggle's [House Prices: Advanced Regression Te
 Read in data provided by Kaggle for this competition. They are organized in the `data/` folder of this RStudio project:
 
 ```{r}
-training <- read_csv("data/train.csv")
-test <- read_csv("data/test.csv")
+trainingOrig <- read_csv("data/train.csv")
+testOrig <- read_csv("data/test.csv")
 sample_submission <- read_csv("data/sample_submission.csv")
 ```
 
@@ -61,11 +61,11 @@ Always, ALWAYS, **ALWAYS** start by looking at your raw data. This gives you vis
 Note that the following code chunk has `eval = FALSE` meaning "don't evaluate this chunk with knitting" because `.Rmd` files won't knit if they include a `View()`:
 
 ```{r, eval = FALSE}
-View(training)
-glimpse(training)
+View(trainingOrig)
+glimpse(trainingOrig)
 
-View(test)
-glimpse(test)
+View(testOrig)
+glimpse(testOrig)
 ```
 
 In particular, pay close attention to the variables and variable types in the
@@ -81,11 +81,11 @@ glimpse(sample_submission)
 Do any data wrangling/transforming here:
 
 ```{r}
-training <- training %>%
+training <- trainingOrig %>%
   mutate(log_liv = log(GrLivArea)) %>%
   select(log_liv, Id, GrLivArea, SalePrice)
 
-test <- test %>%
+test <- testOrig %>%
   mutate(log_liv = log(GrLivArea)) 
 ```
 
@@ -139,10 +139,206 @@ fitted_spline_model_points
 
 ## Crossvalidation from scratch
 
-Implement crossvalidation from scratch here. In other words, don't use an existing function, but rather program your own. 
+Implement crossvalidation from scratch here. In other words, don't use an existing function, but rather program your own.
+
+k=5
+#data set labeling
+```{r}
+trainingcv_shuffled <- training %>% 
+  sample_frac(size = 1, replace = FALSE) 
+
+training1 <- trainingcv_shuffled %>%
+  slice(1:292) %>%
+  mutate(fold = 1)
+
+training2 <- trainingcv_shuffled %>%
+  slice(293:584) %>%
+  mutate(fold = 2)
+
+training3 <- trainingcv_shuffled %>%
+  slice(585:876) %>%
+  mutate(fold = 3)
+
+training4 <- trainingcv_shuffled %>%
+  slice(877:1168) %>%
+  mutate(fold = 4)
+
+training5 <- trainingcv_shuffled %>%
+  slice(1169:1460) %>%
+  mutate(fold = 5)
+
+trainingcv <- rbind(training1, training2, training3, training4, training5)
+```
+
 
 ```{r}
+##building first iteration of cv training data
+training1values <- c(1,2,3,4)
 
+trainingcv_1 <- trainingcv %>%
+  filter(fold %in% training1values) %>%
+  mutate(log_liv = log(GrLivArea)) %>%
+  select(log_liv, Id, GrLivArea, SalePrice)
+
+##building first iteration of cv test data
+testcv_1 <- trainingcv %>%
+  filter(fold == 5) %>%
+  mutate(log_liv = log(GrLivArea)) 
+
+##fitting training data to model with df=20
+fitted_spline_model1 <- smooth.spline(x = trainingcv_1$log_liv, y = trainingcv_1$SalePrice, df = 20)
+
+##converting output into a dataframe
+fitted_spline_model_points1 <- fitted_spline_model1 %>%
+  broom::augment()
+fitted_spline_model_points1
+
+#graphing training results
+ggplot(data = trainingcv_1, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = fitted_spline_model_points1, aes(x = x, y = .fitted), col = "blue", size = 1)
+
+##using test data with model, df = 20
+fitted_spline_model_test1 <- smooth.spline(x = testcv_1$log_liv, y = testcv_1$SalePrice, df = 20)
+
+fitted_spline_model_points_test1 <- fitted_spline_model_test1 %>%
+  broom::augment()
+fitted_spline_model_points_test1
+
+##calculate RMSE of test data
+rmse_frame1 <- fitted_spline_model_points_test1%>%
+  mutate(
+    squared_residual = .resid^2
+    ) %>%
+  summarize(mse = mean(squared_residual)) %>%
+  mutate(rmse = sqrt(mse))  %>%
+  mutate(iteration = 1)
+
+rmse_frame1
+
+#graphing test results
+ggplot(data = testcv_1, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = fitted_spline_model_points_test1, aes(x = x, y = .fitted), col = "blue", size = 1)
+
+
+
+```
+
+
+```{r}
+fitted_spline_model_points %>%
+  mutate(
+    squared_residual = .resid^2
+    ) %>%
+  summarize(mse = mean(squared_residual)) %>%
+  mutate(rmse = sqrt(mse))
+```
+
+```{r}
+##building second iteration of cv training data
+training2values <- c(1,2,3,5)
+
+trainingcv_2 <- trainingcv %>%
+  filter(fold %in% training2values) %>%
+  mutate(log_liv = log(GrLivArea)) %>%
+  select(log_liv, Id, GrLivArea, SalePrice)
+
+##building second iteration of cv test data
+testcv_2 <- trainingcv %>%
+  filter(fold == 4) %>%
+  mutate(log_liv = log(GrLivArea)) 
+
+##fitting training data to model with df=15
+fitted_spline_model2 <- smooth.spline(x = trainingcv_2$log_liv, y = trainingcv_2$SalePrice, df = 15)
+
+##converting output into a dataframe
+fitted_spline_model_points2 <- fitted_spline_model2 %>%
+  broom::augment()
+fitted_spline_model_points2
+
+#graphing training results
+ggplot(data = trainingcv_2, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = fitted_spline_model_points2, aes(x = x, y = .fitted), col = "blue", size = 1)
+
+##using test data with model, df = 15
+fitted_spline_model_test2 <- smooth.spline(x = testcv_2$log_liv, y = testcv_2$SalePrice, df = 15)
+
+fitted_spline_model_points_test2 <- fitted_spline_model_test2 %>%
+  broom::augment()
+fitted_spline_model_points_test2
+
+##calculate RMSE of test data
+rmse_frame2 <- fitted_spline_model_points_test2%>%
+  mutate(
+    squared_residual = .resid^2
+    ) %>%
+  summarize(mse = mean(squared_residual)) %>%
+  mutate(rmse = sqrt(mse))  %>%
+  mutate(iteration = 2)
+
+rmse_frame2
+
+#graphing test results
+ggplot(data = testcv_2, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = fitted_spline_model_points_test2, aes(x = x, y = .fitted), col = "blue", size = 1)
+```
+
+```{r}
+##building third iteration of cv training data
+training3values <- c(1,2,4,5)
+
+trainingcv_3 <- trainingcv %>%
+  filter(fold %in% training3values) %>%
+  mutate(log_liv = log(GrLivArea)) %>%
+  select(log_liv, Id, GrLivArea, SalePrice)
+
+##building third iteration of cv test data
+testcv_3 <- trainingcv %>%
+  filter(fold == 3) %>%
+  mutate(log_liv = log(GrLivArea)) 
+
+##fitting training data to model with df=10
+fitted_spline_model3 <- smooth.spline(x = trainingcv_3$log_liv, y = trainingcv_3$SalePrice, df = 10)
+
+##converting output into a dataframe
+fitted_spline_model_points3 <- fitted_spline_model3 %>%
+  broom::augment()
+fitted_spline_model_points3
+
+#graphing training results
+ggplot(data = trainingcv_3, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = fitted_spline_model_points3, aes(x = x, y = .fitted), col = "blue", size = 1)
+
+##using test data with model, df = 15
+fitted_spline_model_test3 <- smooth.spline(x = testcv_3$log_liv, y = testcv_3$SalePrice, df = 10)
+
+fitted_spline_model_points_test3 <- fitted_spline_model_test3 %>%
+  broom::augment()
+fitted_spline_model_points_test3
+
+##calculate RMSE of test data
+rmse_frame3 <- fitted_spline_model_points_test3%>%
+  mutate(
+    squared_residual = .resid^2
+    ) %>%
+  summarize(mse = mean(squared_residual)) %>%
+  mutate(rmse = sqrt(mse))  %>%
+  mutate(iteration = 2)
+
+rmse_frame3
+
+#graphing test results
+ggplot(data = testcv_3, aes(x = log_liv, y = SalePrice)) +
+  geom_point() + geom_line(data = fitted_spline_model_points_test3, aes(x = x, y = .fitted), col = "blue", size = 1)
+```
+
+
+```{r}
+rmse_frame <- rbind(rmse_frame1,rmse_frame2, rmse_frame3)
+
+rmse_results <- rmse_frame %>%
+  mutate(rmse_total = sum(rmse))%>%
+  mutate(rmse_results = rmse_total/nrow(rmse_frame))   
+rmse_results
 ```
 
 
